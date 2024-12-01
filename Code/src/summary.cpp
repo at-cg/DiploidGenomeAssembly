@@ -6,6 +6,7 @@ using namespace std;
 #define rb pop_back
 #define ti tuple<int, int, int>
 #define pii pair<int, int>
+#define piii pair<int, pii>
 #define pli pair<ll, int>
 #define pll pair<ll, ll>
 #define mp make_pair
@@ -16,7 +17,7 @@ using namespace std;
 using namespace std;
 
 fstream f;
-int *closestloci_forward, *closestloci_backward, H;
+int *closestloci_forward, *closestloci_backward, H, l0, r0, l1, r1;
 
 bool in_range(int x, vector<int> v){
     for(int i = 0; i < v.size() - 1; i += 2){
@@ -34,6 +35,18 @@ int distanceforward(int x){
 bool colocated(int x1, int x2){
     if(abs(x2 - x1) == 2 * H + 1)return true;
     return false;
+}
+
+char find(int& x, string& s0, string& s1){
+    if(in_range(x, {l1, r1})){
+        x -= 2 * H + 1;
+        return s1[(x - 1 + H) % H];
+    }else{
+        return s0[(x - 1 + H) % H];
+    }
+}
+bool left_maximal(int x1, int x2, string& s0, string& s1){
+    return find(x1, s0, s1) != find(x2, s0, s1);
 }
 
 int main(int argc, char* argv[])
@@ -76,45 +89,47 @@ int main(int argc, char* argv[])
     const int double_length = (len - 2) / 2;
     assert(double_length % 2 == 0);
     H = double_length / 2;
-    const int l0 = 0, r0 = double_length / 2 - 1, l1 = double_length + 1, r1 = l1 + r0;
+    l0 = 0, r0 = double_length / 2 - 1, l1 = double_length + 1, r1 = l1 + r0;
 
     closestloci_forward = new int[H];
     for(int i = 0; i < H; i++)closestloci_forward[i] = -1;
-    int pst = -1, maxgap = 0;
+    int pst = -1, maxgap = 0, cntloci = 0;
     for(int i = double_length - 1; i >= 0; i--){
-        int loc = i;
-        if(loc >= H)loc -= H;
         if(text[i] != text[i + 2 * H + 1]){
+            cntloci += 1;
             if(pst != -1){
-                int ppst = i >= H ? i - H : i;
-                maxgap = max(maxgap, abs(pst - ppst) - 1);
+                int val = pst - i - 1;
+                maxgap = max(maxgap, val);
             }
             pst = i;
-            if(pst >= H)pst -= H;
         }
+        int loc = i;
+        if(loc >= H)loc -= H;
         if(closestloci_forward[loc] != -1)continue;
         closestloci_forward[loc] = pst;
+        if(closestloci_forward[loc] >= H)closestloci_forward[loc] -= H;
     }
+    cout << "Number of heterozygous loci: " << cntloci << endl;
     cout << "Maximum gap between two adjacent heterozygous loci: " << maxgap << endl;
    
     closestloci_backward = new int[H];
     for(int i = 0; i < H; i++)closestloci_backward[i] = -1;
     pst = -1;
     for(int i = 0; i <= double_length - 1; i++){
-        int loc = i;
-        if(loc >= H)loc -= H;
         if(text[i] != text[i + 2 * H + 1]){
             pst = i;
             if(pst >= H)pst -= H;
         }
+        int loc = i;
+        if(loc >= H)loc -= H;
         if(closestloci_backward[loc] != -1)continue;
         closestloci_backward[loc] = pst;
     }
 
-    for(int i = 0; i < H; i++)cout << closestloci_forward[i] << " ";
-    cout << endl;
-    for(int i = 0; i < H; i++)cout << closestloci_backward[i] << " ";
-    cout << endl;
+    // for(int i = 0; i < H; i++)cout << closestloci_forward[i] << " ";
+    // cout << endl;
+    // for(int i = 0; i < H; i++)cout << closestloci_backward[i] << " ";
+    // cout << endl;
 
     int *SA = (int *)malloc(len * sizeof(int));
     int *iSA = (int *)malloc(len * sizeof(int));
@@ -141,7 +156,7 @@ int main(int argc, char* argv[])
     }
     free(iSA);
 
-    int offset = 50;
+    int offset = 50, threshold = 1000;
     
     // max length double repeat
     int maxrepeat = 0; 
@@ -152,6 +167,7 @@ int main(int argc, char* argv[])
     int bothcover = 0; 
     int onecover = 0; 
     int nonecover = 0; 
+    vector<piii> interleaved;
     for(int i = 0; i < len - 1; i++){
         bool mat = false;
         if(!in_range(SA[i], {l0, r0, l1, r1}))continue;
@@ -165,7 +181,12 @@ int main(int argc, char* argv[])
             
             if(!in_range(SA[j], {l0, r0, l1, r1}))continue;
             if(colocated(SA[i], SA[j]))continue;
+            if(!left_maximal(SA[i], SA[j], s0, s1))continue;
             
+            if(val >= threshold){
+                interleaved.pb({val, {SA[i], SA[j]}});
+            }
+
             maxrepeat = max(maxrepeat, val);
             
             if(mat && in_range(SA[j], {l0, r0})){
@@ -195,6 +216,7 @@ int main(int argc, char* argv[])
             }
         }
     } 
+    cout << "Size of interleaved vector: " << interleaved.size() << endl;
     cout << "Maximum length of double repeat: " << maxrepeat << endl;
     cout << "Maximum length of double repeat for maternal haplotype: " << maxrepeat_mat << endl;
     cout << "Maximum length of double repeat for paternal haplotype: " << maxrepeat_pat << endl;
