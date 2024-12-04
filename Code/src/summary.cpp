@@ -18,21 +18,31 @@ using namespace std;
 
 fstream f;
 int *closestloci_forward, *closestloci_backward, H, l0, r0, l1, r1;
-
-bool in_range(int x, vector<int> v){
+const int offset = 50, threshold = 1000;
+    
+bool in_range(int& x, vector<int> v){
     for(int i = 0; i < v.size() - 1; i += 2){
         if(x >= v[i] && x <= v[i + 1])return true;
     }
     return false;
 }
 
+int distance(int x, int y){// end points inclusive, order of x, y matters (distance from x, x + 1, x + 2 -> y)
+    return (y - x + H) % H + 1;
+}
+
+int distanceloci(int x){
+    if(x >= 2 * H + 1)x -= 2 * H + 1;
+    return distance(closestloci_backward[x], closestloci_forward[x]) - 2;
+}
+
 int distanceforward(int x){
     if(x >= 2 * H + 1)x -= 2 * H + 1;
     assert(x < H);
-    return (closestloci_forward[x] - x + H) % H;
+    return distance(x, closestloci_forward[x]);
 }
 
-bool colocated(int x1, int x2){
+bool colocated(int& x1, int& x2){
     if(abs(x2 - x1) == 2 * H + 1)return true;
     return false;
 }
@@ -49,6 +59,108 @@ bool left_maximal(int x1, int x2, string& s0, string& s1){
     return find(x1, s0, s1) != find(x2, s0, s1);
 }
 
+int gap(int x, int& val){
+    if(x >= 2 * H + 1)x -= 2 * H + 1;
+    return min(distance(closestloci_backward[x], x + val - 1), distance(x, closestloci_forward[x])) + 1;
+}
+
+piii find_interleaved(vector<piii>& v, string s){ // intra-repeat calculation only
+    s += s;
+    sort(v.begin(), v.end(), [](const auto& a, const auto& b){return a.first > b.first;});
+    int val1 = 0, val2 = 0; int freq = 0;
+    for(int i = 0; i < v.size() - 1; i++){
+        pii& p1 = v[i].second;
+        for(int j = i + 1; j < v.size() && v[j].first >= val1; j++){
+            pii& p2 = v[j].second;
+            if(s.substr(p2.first, v[j].first) == s.substr(p1.first, v[j].first))continue; // will account for triple repeat 
+            if((p1.first < p2.first && p2.first < p1.second && p1.second < p2.second) || (p2.first < p1.first && p1.first < p2.second && p2.second < p1.second)){
+                if(v[j].first > val1){
+                    freq = 1;
+                    val1 = v[j].first; val2 = v[i].first;
+                }else if(v[j].first == val1){
+                    freq++;
+                    val2 = min(val2, v[i].first);
+                }
+            }
+        }
+    }
+    return {freq, {val1, val2}};
+}
+
+// len, (sum, freq)
+vector<pii> find_interleaved_stats(vector<piii>& v, string s, pii p){ // intra-repeat calculation only
+    s += s;
+    vector<pii> o;
+    int sum = p.first + p.second;
+    for(int i = 0; i < v.size() - 1 && v[i].first >= p.second; i++){
+        pii& p1 = v[i].second;
+        for(int j = i + 1; j < v.size(); j++){
+            pii& p2 = v[j].second;
+            if(s.substr(p2.first, v[j].first) == s.substr(p1.first, v[j].first))continue; // will account for triple repeat 
+            if(v[i].first + v[j].first < sum)continue;
+            if((p1.first < p2.first && p2.first < p1.second && p1.second < p2.second) || (p2.first < p1.first && p1.first < p2.second && p2.second < p1.second)){
+                o.pb({v[j].first, v[i].first});
+            }
+        }
+    }
+    return o;
+}
+
+piii find_specialinterleaved(vector<piii>& v){
+    sort(v.begin(), v.end(), [](const auto& a, const auto& b){return a.first > b.first;});
+    int val1 = 0, val2 = 0, freq = 0;
+    for(int i = 0; i < v.size() - 1; i++){
+        pii& p1 = v[i].second;
+        for(int j = i + 1; j < v.size() && v[j].first >= val1; j++){
+            pii& p2 = v[j].second;
+            if(p2.first - p1.first == p2.second - p1.second){
+                if(v[j].first > val1){
+                    val1 = v[j].first; val2 = v[i].first;
+                    freq = 1;
+                }else if(v[j].first == val1){
+                    val2 = min(val2, v[i].first);
+                    freq++;
+                }
+            }
+        }
+    }
+    return {freq, {val1, val2}};
+}
+
+vector<pii> find_specialinterleaved_stats(vector<piii>& v, pii p){
+    sort(v.begin(), v.end(), [](const auto& a, const auto& b){return a.first > b.first;});
+    vector<pii> o;
+    int sum = p.first + p.second;
+    for(int i = 0; i < v.size() - 1 && v[i].first >= p.second; i++){
+        pii& p1 = v[i].second;
+        for(int j = i + 1; j < v.size(); j++){
+            pii& p2 = v[j].second;
+            if(p2.first - p1.first == p2.second - p1.second && v[i].first + v[j].first >= sum){
+                o.pb({v[j].first, v[i].first});
+            }
+        }
+    }
+    return o;
+}
+
+void printgap(string outputpath, int chk){
+    freopen(outputpath.c_str(), "w", stdout);
+    for(int i = 0; i < H; i++){
+        if(closestloci_forward[i] == i){
+            int val = distance(i, closestloci_forward[(i + 1) % H]) - 2;
+            assert(val <= chk);
+            cout << val << endl;
+        }
+    }   
+}
+
+void print(vector<pii> v, string outputpath){
+    freopen(outputpath.c_str(), "w", stdout);
+    for(pii p : v){
+        cout << p.first << " " << p.second << endl;
+    }
+}
+
 int main(int argc, char* argv[])
 {   
     if(argc != 4){
@@ -57,9 +169,9 @@ int main(int argc, char* argv[])
 
     const char* mat_fastafile = argv[1];
     const char* pat_fastafile = argv[2];
-    const char* outputfile = argv[3];
-
-    freopen(outputfile, "w", stdout);
+    string outputpath = argv[3];
+    string summarypath = outputpath + "summary.txt";
+    freopen(summarypath.c_str(), "w", stdout);
 
     f.open(mat_fastafile, ios::in);
     string s0, line;
@@ -109,9 +221,9 @@ int main(int argc, char* argv[])
         closestloci_forward[loc] = pst;
         if(closestloci_forward[loc] >= H)closestloci_forward[loc] -= H;
     }
-    cout << "Number of heterozygous loci: " << cntloci << endl;
+    cout << "Number of heterozygous loci: " << (cntloci / 2) << endl;
     cout << "Maximum gap between two adjacent heterozygous loci: " << maxgap << endl;
-   
+
     closestloci_backward = new int[H];
     for(int i = 0; i < H; i++)closestloci_backward[i] = -1;
     pst = -1;
@@ -156,73 +268,155 @@ int main(int argc, char* argv[])
     }
     free(iSA);
 
-    int offset = 50, threshold = 1000;
-    
     // max length double repeat
-    int maxrepeat = 0; 
-    int maxrepeat_mat = 0, maxrepeat_pat = 0; 
-    int maxtriplerepeat_mat = 0, maxtriplerepeat_pat = 0;
-    int minlength_forwellbridging = H;
+    int maxrepeat = 0; int maxrepeat_F = 0; 
+    int maxrepeat_mat = 0, maxrepeat_pat = 0; int maxrepeat_mat_F = 0, maxrepeat_pat_F = 0; 
+    int maxtriple_mat = 0, maxtriple_pat = 0; int maxtriple_mat_F = 0, maxtriple_pat_F = 0;
+    int minlength_wellbridging = 0; 
     // stats of double repeats for greedy
-    int bothcover = 0; 
-    int onecover = 0; 
-    int nonecover = 0; 
-    vector<piii> interleaved;
+    int bothcover = 0; int bothcover_F = 0;
+    int onecover = 0; int onecover_F = 0;
+    int nonecover = 0; int nonecover_F = 0;
+    vector<piii> double_mat, double_pat, double_both;
     for(int i = 0; i < len - 1; i++){
-        bool mat = false;
+        bool mati = false;
         if(!in_range(SA[i], {l0, r0, l1, r1}))continue;
-        if(in_range(SA[i], {l0, r0}))mat = true;
-        else mat = false;
+        if(in_range(SA[i], {l0, r0}))mati = true;
         int val = H;
         int dist1 = distanceforward(SA[i]);
-        int cntmat = 0, cntpat = 0;
+        int repeatcnt_mat = 0, repeatcnt_pat = 0; 
+        bool repeatcnt_mat_lm = false, repeatcnt_pat_lm = false;
         for(int j = i + 1; j < min(len, i + offset); j++){
+            int cntmat = mati; 
+        
             val = min(val, lcp[j]);
+            if(val < threshold)break;
             
             if(!in_range(SA[j], {l0, r0, l1, r1}))continue;
+            if(in_range(SA[j], {l0, r0}))cntmat++;
+            
             if(colocated(SA[i], SA[j]))continue;
-            if(!left_maximal(SA[i], SA[j], s0, s1))continue;
+            bool lm = left_maximal(SA[i], SA[j], s0, s1);
             
-            if(val >= threshold){
-                interleaved.pb({val, {SA[i], SA[j]}});
+            // Precomputation for interleaved repeats
+            if(val >= threshold && lm){
+                int id1 = SA[i], id2 = SA[j];
+                if(id1 >= 2 * H + 1)id1 -= 2 * H + 1;
+                if(id2 >= 2 * H + 1)id2 -= 2 * H + 1;
+                pii id = {min(id1, id2), max(id1, id2)};
+                if(cntmat == 2)double_mat.pb({val, id});
+                else if(cntmat == 1){// order of indices matter here
+                    if(!mati)swap(id1, id2); // want i to be from mat
+                    double_both.pb({val, {id1, id2}}); 
+                }else double_pat.pb({val, id});
             }
 
-            maxrepeat = max(maxrepeat, val);
-            
-            if(mat && in_range(SA[j], {l0, r0})){
-                maxrepeat_mat = max(maxrepeat_mat, val);
-                cntmat += 1;
-                if(cntmat >= 2){
-                    maxtriplerepeat_mat = max(maxtriplerepeat_mat, val);
-                }
+            // Maximum double repeat
+            if(lm){
+                if(val > maxrepeat){
+                    maxrepeat = val;
+                    maxrepeat_F = 1;
+                }else if(val == maxrepeat)maxrepeat_F++;
             }
-            if(!mat && in_range(SA[j], {l1, r1})){
-                maxrepeat_pat = max(maxrepeat_pat, val);
-                cntpat += 1;
-                if(cntpat >= 2){
-                    maxtriplerepeat_pat = max(maxtriplerepeat_pat, val);
-                }
-            }
-            
-            int dist2 = distanceforward(SA[j]);
-            if(dist1 > val && dist2 > val){// both copies do not cover the locus
-                nonecover = max(nonecover, val);
 
-                // int gap1 = findgap(SA[i] + val, closestloci_backward[SA[i]]);
-            }else if(dist1 <= val && dist2 <= val){// both copies cover the locus
-                bothcover = max(bothcover, val);
-            }else{// exactly one copy covers the locus
-                onecover = max(onecover, val);
+            // Maximum intra-double + intra-triple repeat
+            if(cntmat == 2){
+                if(lm){
+                    if(val > maxrepeat_mat){
+                        maxrepeat_mat = val;
+                        maxrepeat_mat_F = 1;
+                    }else if(val == maxrepeat_mat)maxrepeat_mat_F++;
+                }
+                if(lm || !repeatcnt_mat_lm){
+                    repeatcnt_mat += 1;
+                    if(repeatcnt_mat >= 2){
+                        if(val > maxtriple_mat){
+                            maxtriple_mat = val;
+                            maxtriple_mat_F = 1;
+                        }else if(val == maxtriple_mat)maxtriple_mat_F++;
+                    }
+                    if(!lm)repeatcnt_mat_lm = true;
+                }
+            }else if(cntmat == 0){
+                if(lm){
+                    if(val > maxrepeat_pat){
+                    maxrepeat_pat = val;
+                    maxrepeat_pat_F = 1;
+                    }else if(val == maxrepeat_pat)maxrepeat_pat_F++;
+                }
+                if(lm || !repeatcnt_pat_lm){
+                    repeatcnt_pat += 1;
+                    if(repeatcnt_pat >= 2){
+                        if(val > maxtriple_pat){
+                            maxtriple_pat = val;
+                            maxtriple_pat_F = 1;
+                        }else if(val == maxtriple_pat)maxtriple_pat_F++;
+                    }
+                    if(!lm)repeatcnt_pat_lm = true;
+                }
+            }
+            
+            // Stats for Well-bridging
+            if(lm){
+                int dist2 = distanceforward(SA[j]);
+                if(dist1 > val && dist2 > val){// both copies do not cover the locus
+                    int upd = 2 * val + distanceloci(SA[i]) + distanceloci(SA[j]); 
+                    if(upd > nonecover){
+                        nonecover = upd;
+                        nonecover_F = 1;
+                    }else if(upd == nonecover)nonecover_F++;
+                    int len1 = gap(SA[i], val);
+                    int len2 = gap(SA[j], val);
+                    minlength_wellbridging = max(minlength_wellbridging, min(len1, len2));
+                }else if(dist1 <= val && dist2 <= val){// both copies cover the locus
+                    int upd = val; 
+                    if(upd > bothcover){
+                        bothcover = upd;
+                        bothcover_F = 1;
+                    }else if(upd == bothcover)bothcover_F++;
+                    minlength_wellbridging = max(minlength_wellbridging, val + 2);
+                }else{// exactly one copy covers the locus
+                    int upd = 3 * val + 2 * (dist1 > val ? distanceloci(SA[i]) : distanceloci(SA[j]));
+                    if(upd > onecover){
+                        onecover = upd;
+                        onecover_F = 1;
+                    }else if(upd == onecover)onecover_F++;
+                    int lenc = dist1 > val ? gap(SA[i], val) : gap(SA[j], val);
+                    minlength_wellbridging = max(minlength_wellbridging, min(lenc, val + 2));
+                }   
             }
         }
     } 
-    cout << "Size of interleaved vector: " << interleaved.size() << endl;
-    cout << "Maximum length of double repeat: " << maxrepeat << endl;
-    cout << "Maximum length of double repeat for maternal haplotype: " << maxrepeat_mat << endl;
-    cout << "Maximum length of double repeat for paternal haplotype: " << maxrepeat_pat << endl;
-    cout << "Maximum length of triple repeat for maternal haplotype: " << maxtriplerepeat_mat << endl;
-    cout << "Maximum length of triple repeat for paternal haplotype: " << maxtriplerepeat_pat << endl;
-    cout << "Maximum length of double repeat where both copies cover the het loci: " << bothcover << endl;
-    cout << "Maximum length of double repeat where exactly one copy covers the het loci: " << onecover << endl;
-    cout << "Maximum length of double repeat where both copies do not cover the het loci: " << nonecover << endl;
+    piii maxinterleaved_mat = find_interleaved(double_mat, s0);
+    vector<pii> interleaved_mat_stats = find_interleaved_stats(double_mat, s0, maxinterleaved_mat.second);
+    piii maxinterleaved_pat = find_interleaved(double_pat, s1);
+    vector<pii> interleaved_pat_stats = find_interleaved_stats(double_pat, s1, maxinterleaved_pat.second);
+    piii specialinterleaved = find_specialinterleaved(double_both);
+    vector<pii> specialinterleaved_stats = find_specialinterleaved_stats(double_both, specialinterleaved.second);
+
+    cout << "Size of vector storing maximal double repeats for mat: " << double_mat.size() << endl;
+    cout << "Maximum length of double repeat: " << maxrepeat << " with freq: " << maxrepeat_F << endl;
+    cout << "Minimum read length required for well-bridging of double repeats: " << minlength_wellbridging << endl;
+    cout << "Maximum length of double repeat for maternal haplotype: " << maxrepeat_mat << " with freq: " << maxrepeat_mat_F << endl;
+    cout << "Maximum length of double repeat for paternal haplotype: " << maxrepeat_pat << " with freq: " << maxrepeat_pat_F << endl;
+    cout << "Maximum length of interleaved repeat for maternal haplotype: " << maxinterleaved_mat.second.first << " " << maxinterleaved_mat.second.second << " with freq: " << maxinterleaved_mat.first << endl;
+    cout << "Maximum length of interleaved repeat for paternal haplotype: " << maxinterleaved_pat.second.first << " " << maxinterleaved_pat.second.second << " with freq: " << maxinterleaved_pat.first << endl;
+    cout << "Maximum length of repeat of type I2: " << specialinterleaved.second.first << " " << specialinterleaved.second.second << " with freq: " << specialinterleaved.first << endl;
+    cout << "Maximum length of triple repeat for maternal haplotype: " << maxtriple_mat << " with freq: " << maxtriple_mat_F << endl;
+    cout << "Maximum length of triple repeat for paternal haplotype: " << maxtriple_pat << " with freq: " << maxtriple_pat_F << endl;
+    cout << "Maximum stat of double repeat where both copies cover the het loci: " << bothcover << " with freq: " << bothcover_F << endl;
+    cout << "Maximum stat of double repeat where exactly one copy covers the het loci: " << onecover << " with freq: " << onecover_F << endl;
+    cout << "Maximum stat of double repeat where both copies do not cover the het loci: " << nonecover << " with freq: " << nonecover_F << endl;
+
+    string gappath = outputpath + "gapstats.txt";
+    printgap(gappath, maxgap);
+
+    string out = outputpath + "interleaved_mat_stats.txt";
+    print(interleaved_mat_stats, out);
+    
+    out = outputpath + "interleaved_pat_stats.txt";
+    print(interleaved_pat_stats, out);
+    
+    out = outputpath + "specialinterleaved_stats.txt";
+    print(specialinterleaved_stats, out);
 } 

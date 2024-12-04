@@ -1,0 +1,2 @@
+rm -f summary 
+g++  -std=c++17 -O3  -I /home/daanish/projects/DiploidGenomeAssembly/libdivsufsort/build/include -I ~/include  -L /home/daanish/projects/DiploidGenomeAssembly/libdivsufsort/build/lib -L ~/lib  -o summary summary.cpp -ldivsufsort -lsdsl 

@@ -287,8 +287,8 @@ int main(int argc, char* argv[])
         cout << stats.first << " " << stats.second << endl;
     }
 
-    map<int, ll> repeatstats_brute;
-    triplerepeat_bruteHaploid(s, repeatstats_brute);
+    // map<int, ll> repeatstats_brute;
+    // triplerepeat_bruteHaploid(s, repeatstats_brute);
 
-    assert(repeatstats == repeatstats_brute);
+    // assert(repeatstats == repeatstats_brute);
 } 

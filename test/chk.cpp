@@ -1,5 +1,5 @@
 #include<bits/stdc++.h>
-#include <divsufsort.h>
+// #include <divsufsort.h>
 using namespace std;
 #define ll long long int
 #define pb push_back
@@ -17,41 +17,44 @@ using namespace std;
 
 int main()
 {   
-    string query = "ACTGAT";
-    const char *text = query.c_str();
-    int len = strlen(text);
+    bool x = false;
+    int y = x;
+    cout << y << endl;
+    // string query = "ACTGAT";
+    // const char *text = query.c_str();
+    // int len = strlen(text);
     
-    int *SA = (int *)malloc(len * sizeof(int));
-    int *iSA = (int *)malloc(len * sizeof(int));
-    int *lcp = (int *)malloc(len * sizeof(int));
+    // int *SA = (int *)malloc(len * sizeof(int));
+    // int *iSA = (int *)malloc(len * sizeof(int));
+    // int *lcp = (int *)malloc(len * sizeof(int));
 
-    // SA
-    divsufsort((unsigned char *)text, SA, len);
+    // // SA
+    // divsufsort((unsigned char *)text, SA, len);
     
-    // iSA
-    for(int i = 0; i < len; i++){
-        iSA[SA[i]] = i;
-    }
+    // // iSA
+    // for(int i = 0; i < len; i++){
+    //     iSA[SA[i]] = i;
+    // }
 
-    // LCP
-    int val = 0; 
-    for(int i = 0; i < len; i++){
-        if(iSA[i] == 0)continue;
-        int start = max(val - 1, 0);
-        while(text[i + start] == text[SA[iSA[i] - 1] + start]){
-            ++start;
-        }
-        val = start;
-        lcp[iSA[i]] = val;
-    }
-    // free(iSA);
+    // // LCP
+    // int val = 0; 
+    // for(int i = 0; i < len; i++){
+    //     if(iSA[i] == 0)continue;
+    //     int start = max(val - 1, 0);
+    //     while(text[i + start] == text[SA[iSA[i] - 1] + start]){
+    //         ++start;
+    //     }
+    //     val = start;
+    //     lcp[iSA[i]] = val;
+    // }
+    // // free(iSA);
 
-    for(int i = 0; i < len; i++)cout << SA[i] << " ";
-    cout << endl;
+    // for(int i = 0; i < len; i++)cout << SA[i] << " ";
+    // cout << endl;
 
-    for(int i = 0; i < len; i++)cout << iSA[i] << " ";
-    cout << endl;
+    // for(int i = 0; i < len; i++)cout << iSA[i] << " ";
+    // cout << endl;
 
-    for(int i = 0; i < len; i++)cout << lcp[i] << " ";
-    cout << endl;
+    // for(int i = 0; i < len; i++)cout << lcp[i] << " ";
+    // cout << endl;
 } 

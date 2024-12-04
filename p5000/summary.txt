@@ -1,0 +1,16 @@
+Length of each haplotype: 61317360
+Number of heterozygous loci: 12373
+Maximum gap between two adjacent heterozygous loci: 55374
+Size of vector storing maximal double repeats for mat: 9171
+Maximum length of double repeat: 16810 with freq: 1
+Minimum read length required for well-bridging of double repeats: 16812
+Maximum length of double repeat for maternal haplotype: 16810 with freq: 1
+Maximum length of double repeat for paternal haplotype: 7746 with freq: 1
+Maximum length of interleaved repeat for maternal haplotype: 8764 8803 with freq: 1
+Maximum length of interleaved repeat for paternal haplotype: 4848 5082 with freq: 1
+Maximum length of repeat of type I2: 7472 7746 with freq: 1
+Maximum length of triple repeat for maternal haplotype: 9317 with freq: 1
+Maximum length of triple repeat for paternal haplotype: 4167 with freq: 1
+Maximum stat of double repeat where both copies cover the het loci: 16810 with freq: 1
+Maximum stat of double repeat where exactly one copy covers the het loci: 101699 with freq: 2
+Maximum stat of double repeat where both copies do not cover the het loci: 83344 with freq: 2
