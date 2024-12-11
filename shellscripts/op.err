@@ -1,4 +1,0 @@
-Usage: plot.py [OPTIONS]
-Try 'plot.py --help' for help.
-
-Error: Invalid value for '--gap_path' / '-gpath': Path '/home/daanish/projects/DiploidGenomeAssembly/results/chr19/p10000//gapstats.txt' does not exist.
