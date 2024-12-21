@@ -52,7 +52,7 @@ def main(mat_path, pat_path, error):
 
     s_pat = ''.join(string_list)
     with open(pat_path, 'w') as file:
-        file.write('>Modified_string')
+        file.write('>Modified_string\n')
         file.write(s_pat)
 
 

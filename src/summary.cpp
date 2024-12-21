@@ -1,6 +1,6 @@
 #include<bits/stdc++.h>
+#include<filesystem>
 #include <divsufsort.h>
-using namespace std;
 #define ll long long int
 #define pb push_back
 #define rb pop_back
@@ -15,10 +15,11 @@ using namespace std;
 #define S second
 
 using namespace std;
+namespace fs = std::filesystem;
 
 fstream f;
 int *closestloci_forward, *closestloci_backward, H, l0, r0, l1, r1;
-const int offset = 50, threshold = 1000;
+const int offset = 1000;
     
 bool in_range(int& x, vector<int> v){
     for(int i = 0; i < v.size() - 1; i += 2){
@@ -94,10 +95,9 @@ vector<pii> find_interleaved_stats(vector<piii>& v, string s, pii p){ // intra-r
     int sum = p.first + p.second;
     for(int i = 0; i < v.size() - 1 && v[i].first >= p.second; i++){
         pii& p1 = v[i].second;
-        for(int j = i + 1; j < v.size(); j++){
+        for(int j = i + 1; j < v.size() && v[j].first + v[i].first >= sum; j++){
             pii& p2 = v[j].second;
             if(s.substr(p2.first, v[j].first) == s.substr(p1.first, v[j].first))continue; // will account for triple repeat 
-            if(v[i].first + v[j].first < sum)continue;
             if((p1.first < p2.first && p2.first < p1.second && p1.second < p2.second) || (p2.first < p1.first && p1.first < p2.second && p2.second < p1.second)){
                 o.pb({v[j].first, v[i].first});
             }
@@ -133,9 +133,9 @@ vector<pii> find_specialinterleaved_stats(vector<piii>& v, pii p){
     int sum = p.first + p.second;
     for(int i = 0; i < v.size() - 1 && v[i].first >= p.second; i++){
         pii& p1 = v[i].second;
-        for(int j = i + 1; j < v.size(); j++){
+        for(int j = i + 1; j < v.size() && v[j].first + v[i].first >= sum; j++){
             pii& p2 = v[j].second;
-            if(p2.first - p1.first == p2.second - p1.second && v[i].first + v[j].first >= sum){
+            if(p2.first - p1.first == p2.second - p1.second){
                 o.pb({v[j].first, v[i].first});
             }
         }
@@ -163,15 +163,18 @@ void print(vector<pii> v, string outputpath){
 
 int main(int argc, char* argv[])
 {   
-    if(argc != 4){
+    if(argc != 6){
         return 1;
     }
 
     const char* mat_fastafile = argv[1];
     const char* pat_fastafile = argv[2];
     string outputpath = argv[3];
+    int threshold = stoi(argv[4]);
+    string il = argv[5];
+    if(!fs::exists(outputpath))fs::create_directories(outputpath);
     string summarypath = outputpath + "/summary.txt";
-    freopen(summarypath.c_str(), "w", stdout);
+    // freopen(summarypath.c_str(), "w", stdout);
 
     f.open(mat_fastafile, ios::in);
     string s0, line;
@@ -299,7 +302,7 @@ int main(int argc, char* argv[])
             bool lm = left_maximal(SA[i], SA[j], s0, s1);
             
             // Precomputation for interleaved repeats
-            if(val >= threshold && lm){
+            if(lm){
                 int id1 = SA[i], id2 = SA[j];
                 if(id1 >= 2 * H + 1)id1 -= 2 * H + 1;
                 if(id2 >= 2 * H + 1)id2 -= 2 * H + 1;
@@ -387,36 +390,37 @@ int main(int argc, char* argv[])
             }
         }
     } 
-    piii maxinterleaved_mat = find_interleaved(double_mat, s0);
-    vector<pii> interleaved_mat_stats = find_interleaved_stats(double_mat, s0, maxinterleaved_mat.second);
-    piii maxinterleaved_pat = find_interleaved(double_pat, s1);
-    vector<pii> interleaved_pat_stats = find_interleaved_stats(double_pat, s1, maxinterleaved_pat.second);
-    piii specialinterleaved = find_specialinterleaved(double_both);
-    vector<pii> specialinterleaved_stats = find_specialinterleaved_stats(double_both, specialinterleaved.second);
-
-    cout << "Size of vector storing maximal double repeats for mat: " << double_mat.size() << endl;
+    
     cout << "Maximum length of double repeat: " << maxrepeat << " with freq: " << maxrepeat_F << endl;
     cout << "Minimum read length required for well-bridging of double repeats: " << minlength_wellbridging << endl;
     cout << "Maximum length of double repeat for maternal haplotype: " << maxrepeat_mat << " with freq: " << maxrepeat_mat_F << endl;
     cout << "Maximum length of double repeat for paternal haplotype: " << maxrepeat_pat << " with freq: " << maxrepeat_pat_F << endl;
-    cout << "Maximum length of interleaved repeat for maternal haplotype: " << maxinterleaved_mat.second.first << " " << maxinterleaved_mat.second.second << " with freq: " << maxinterleaved_mat.first << endl;
-    cout << "Maximum length of interleaved repeat for paternal haplotype: " << maxinterleaved_pat.second.first << " " << maxinterleaved_pat.second.second << " with freq: " << maxinterleaved_pat.first << endl;
-    cout << "Maximum length of repeat of type I2: " << specialinterleaved.second.first << " " << specialinterleaved.second.second << " with freq: " << specialinterleaved.first << endl;
     cout << "Maximum length of triple repeat for maternal haplotype: " << maxtriple_mat << " with freq: " << maxtriple_mat_F << endl;
     cout << "Maximum length of triple repeat for paternal haplotype: " << maxtriple_pat << " with freq: " << maxtriple_pat_F << endl;
     cout << "Maximum stat of double repeat where both copies cover the het loci: " << bothcover << " with freq: " << bothcover_F << endl;
     cout << "Maximum stat of double repeat where exactly one copy covers the het loci: " << onecover << " with freq: " << onecover_F << endl;
     cout << "Maximum stat of double repeat where both copies do not cover the het loci: " << nonecover << " with freq: " << nonecover_F << endl;
+    if(il == "1"){
+        piii maxinterleaved_mat = find_interleaved(double_mat, s0);
+        vector<pii> interleaved_mat_stats = find_interleaved_stats(double_mat, s0, maxinterleaved_mat.second);
+        piii maxinterleaved_pat = find_interleaved(double_pat, s1);
+        vector<pii> interleaved_pat_stats = find_interleaved_stats(double_pat, s1, maxinterleaved_pat.second);
+        piii specialinterleaved = find_specialinterleaved(double_both);
+        vector<pii> specialinterleaved_stats = find_specialinterleaved_stats(double_both, specialinterleaved.second);
 
+        cout << "Maximum length of interleaved repeat for maternal haplotype: " << maxinterleaved_mat.second.first << " " << maxinterleaved_mat.second.second << " with freq: " << maxinterleaved_mat.first << endl;
+        cout << "Maximum length of interleaved repeat for paternal haplotype: " << maxinterleaved_pat.second.first << " " << maxinterleaved_pat.second.second << " with freq: " << maxinterleaved_pat.first << endl;
+        cout << "Maximum length of repeat of type I2: " << specialinterleaved.second.first << " " << specialinterleaved.second.second << " with freq: " << specialinterleaved.first << endl;
+    
+        string out = outputpath + "/interleaved_mat_stats.txt";
+        print(interleaved_mat_stats, out);
+        
+        out = outputpath + "/interleaved_pat_stats.txt";
+        print(interleaved_pat_stats, out);
+        
+        out = outputpath + "/specialinterleaved_stats.txt";
+        print(specialinterleaved_stats, out);
+    }
     string gappath = outputpath + "/gapstats.txt";
     printgap(gappath, maxgap);
-
-    string out = outputpath + "/interleaved_mat_stats.txt";
-    print(interleaved_mat_stats, out);
-    
-    out = outputpath + "/interleaved_pat_stats.txt";
-    print(interleaved_pat_stats, out);
-    
-    out = outputpath + "/specialinterleaved_stats.txt";
-    print(specialinterleaved_stats, out);
 } 
